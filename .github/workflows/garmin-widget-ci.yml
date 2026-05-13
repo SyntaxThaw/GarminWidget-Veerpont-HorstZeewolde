@@ -1,0 +1,53 @@
+name: Garmin Widget CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Run optional publish step"
+        required: false
+        default: "false"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Connect IQ SDK
+        run: |
+          test -n "${{ secrets.CONNECTIQ_SDK_URL }}" || { echo "CONNECTIQ_SDK_URL secret ontbreekt"; exit 1; }
+          curl -L "${{ secrets.CONNECTIQ_SDK_URL }}" -o ciq-sdk.zip
+          unzip -q ciq-sdk.zip -d "$HOME/ciq-sdk"
+
+      - name: Build PRG
+        env:
+          CIQ_DEV_KEY: ${{ secrets.CIQ_DEV_KEY }}
+        run: |
+          SDK_BIN="$(find $HOME/ciq-sdk -type f -name monkeyc | head -n 1)"
+          test -n "$SDK_BIN" || { echo "monkeyc niet gevonden"; exit 1; }
+          test -n "$CIQ_DEV_KEY" || { echo "CIQ_DEV_KEY secret ontbreekt"; exit 1; }
+          echo "$CIQ_DEV_KEY" > developer_key.der
+          "$SDK_BIN" -f monkey.jungle -o bin/VeerdienstWidget.prg -y developer_key.der
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: veerdienst-widget-prg
+          path: bin/VeerdienstWidget.prg
+
+      - name: Optional publish handoff
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish == 'true' }}
+        run: |
+          echo "Automatisch publiceren naar Garmin Connect IQ Store vereist extra tooling/API toegang."
+          echo "Gebruik artifact bin/VeerdienstWidget.prg voor handmatige upload in Connect IQ Developer Console."

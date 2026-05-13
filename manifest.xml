@@ -6,7 +6,7 @@
         launcherIcon="@Drawables.LauncherIcon"
         minApiLevel="3.4.0"
         name="@Strings.AppName"
-        type="watchface">
+        type="widget">
 
         <iq:products>
             <iq:product id="instinct2"/>

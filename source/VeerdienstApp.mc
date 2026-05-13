@@ -8,7 +8,7 @@ class VeerdienstApp extends App.AppBase {
     }
 
     function getInitialView() {
-        return [ new VeerdienstWatchFace() ];
+        return [ new VeerdienstWidget() ];
     }
 }
 

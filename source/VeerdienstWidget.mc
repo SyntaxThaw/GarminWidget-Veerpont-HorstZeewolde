@@ -4,7 +4,7 @@ using Toybox.Time;
 using Toybox.Time.Gregorian;
 using Toybox.WatchUi as Ui;
 
-class VeerdienstWatchFace extends Ui.WatchFace {
+class VeerdienstWidget extends Ui.Widget {
 
     const START_ZOMERVAKANTIE = 20260711;
     const EIND_ZOMERVAKANTIE  = 20260823;
@@ -41,8 +41,15 @@ class VeerdienstWatchFace extends Ui.WatchFace {
         }
     };
 
+    var _cachedData;
+    var _cachedMinuteKey;
+
     function initialize() {
-        Ui.WatchFace.initialize();
+        Ui.Widget.initialize();
+    }
+
+    function onShow() as Void {
+        Ui.requestUpdate();
     }
 
     function onUpdate(dc as Gfx.Dc) as Void {
@@ -100,8 +107,14 @@ class VeerdienstWatchFace extends Ui.WatchFace {
         var nowInfo = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
         var clock   = Sys.getClockTime();
 
-        var dagVanDeWeek = nowInfo.day_of_week; // 1=zon ... 7=zat
-        var maand        = nowInfo.month;       // 1..12
+        var minuteKey = (nowInfo.year * 100000000) + (nowInfo.month * 1000000) +
+            (nowInfo.day * 10000) + (clock.hour * 100) + clock.min;
+        if (_cachedMinuteKey != null && _cachedMinuteKey == minuteKey && _cachedData != null) {
+            return _cachedData;
+        }
+
+        var dagVanDeWeek = nowInfo.day_of_week;
+        var maand        = nowInfo.month;
         var minutenNu    = (clock.hour * 60) + clock.min;
         var datumKey     = (nowInfo.year * 10000) + (nowInfo.month * 100) + nowInfo.day;
 
@@ -126,22 +139,22 @@ class VeerdienstWatchFace extends Ui.WatchFace {
             :laatste          => null
         };
 
-        if (geenVaartVandaag) {
-            return result;
+        if (!geenVaartVandaag) {
+            var roosterType = isZomerrooster ? ROOSTERS[:zomer] : ROOSTERS[:regulier];
+            var tijdenZeewolde = roosterType[dagType][:zeewolde];
+            var tijdenHorst    = roosterType[dagType][:horst];
+
+            for (var i = 0; i < tijdenZeewolde.size(); i++) {
+                verwerkRit(result, tijdenZeewolde[i], "Z->H", minutenNu);
+            }
+
+            for (var j = 0; j < tijdenHorst.size(); j++) {
+                verwerkRit(result, tijdenHorst[j], "H->Z", minutenNu);
+            }
         }
 
-        var roosterType = isZomerrooster ? ROOSTERS[:zomer] : ROOSTERS[:regulier];
-        var tijdenZeewolde = roosterType[dagType][:zeewolde];
-        var tijdenHorst    = roosterType[dagType][:horst];
-
-        for (var i = 0; i < tijdenZeewolde.size(); i++) {
-            verwerkRit(result, tijdenZeewolde[i], "Z->H", minutenNu);
-        }
-
-        for (var j = 0; j < tijdenHorst.size(); j++) {
-            verwerkRit(result, tijdenHorst[j], "H->Z", minutenNu);
-        }
-
+        _cachedMinuteKey = minuteKey;
+        _cachedData = result;
         return result;
     }
 
