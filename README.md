@@ -1,6 +1,6 @@
 # Veerdienst Instinct 2
 
-Eenvoudige Garmin Connect IQ watch face voor de Garmin Instinct 2.
+Eenvoudige Garmin Connect IQ widget voor de Garmin Instinct 2.
 
 Toont:
 - volgende rit
